@@ -72,6 +72,74 @@ describe("mountBoard", () => {
     }
   });
 
+  it("shows every team's call on its tab and its roster header", () => {
+    const types = new Map((data.teams as unknown as { rid: number; type: string }[]).map((t) => [t.rid, t.type]));
+    const tabs = [...document.querySelectorAll<HTMLButtonElement>("#tabs .tab")];
+    expect(tabs).toHaveLength(data.teams.length - 1);
+    for (const tab of tabs) {
+      const badge = tab.querySelector<HTMLElement>(".call")!;
+      const type = types.get(Number(tab.dataset.team))!;
+      expect(badge.dataset.call).toBe(type);
+      // The tab's badge is an abbreviation: the word is in its title and in the text a screen reader gets.
+      expect(badge.title.toLowerCase()).toContain(type);
+      expect(badge.textContent!.toLowerCase()).toContain(type);
+    }
+    const panels = [...document.querySelectorAll<HTMLElement>("#rosters > .panel")];
+    expect(panels.length).toBeGreaterThan(1);
+    for (const panel of panels) {
+      const badge = panel.querySelector<HTMLElement>(".phead .call")!;
+      const type = types.get(Number(panel.dataset.rid))!;
+      expect(badge.dataset.call).toBe(type);
+      expect(badge.textContent!.toLowerCase()).toBe(type);
+      expect(panel.querySelector(".ttype")).toBeNull();
+    }
+    for (const badge of document.querySelectorAll<HTMLElement>("#rail .mside .call, #rail h3 .call")) {
+      expect(["contend", "retool", "rebuild"]).toContain(badge.dataset.call);
+    }
+    expect(document.querySelector("#rail h3 .call")).not.toBeNull();
+  });
+
+  it("shows a team's call on every deal card", () => {
+    document.querySelector<HTMLButtonElement>('#views .view[data-view="compare"]')!.click();
+    expect(errors).toEqual([]);
+    const cards = [...document.querySelectorAll("#compare .dcard")];
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) expect(card.querySelectorAll(".dt .call").length).toBeGreaterThan(0);
+    document.querySelector<HTMLButtonElement>('#views .view[data-view="board"]')!.click();
+  });
+
+  it("with weights on, a roster header has the select in place of the badge, and an override shows wherever the team is named", () => {
+    const toggle = document.querySelector<HTMLInputElement>("#w-on")!;
+    toggle.click();
+    expect(errors).toEqual([]);
+    const panel = () => document.querySelector<HTMLElement>("#rosters > .panel:not([data-rid=\"" + data.me_rid + "\"])")!;
+    const rid = panel().dataset.rid!;
+    expect(panel().querySelector(".phead .call")).toBeNull();
+    const select = panel().querySelector<HTMLSelectElement>(".ttype")!;
+    const before = select.value;
+    const next = ["contend", "retool", "rebuild"].find((t) => t !== before)!;
+    select.value = next;
+    select.dispatchEvent(new window.Event("change"));
+    expect(errors).toEqual([]);
+    const tabBadge = () => document.querySelector<HTMLElement>(`#tabs .tab[data-team="${rid}"] .call`)!;
+    expect(tabBadge().dataset.call).toBe(next);
+    expect(tabBadge().title).toContain("set by you");
+    // Weights off again: the override still stands, and the header's badge shows it.
+    toggle.click();
+    expect(panel().querySelector(".ttype")).toBeNull();
+    expect(panel().querySelector<HTMLElement>(".phead .call")!.dataset.call).toBe(next);
+    expect(tabBadge().dataset.call).toBe(next);
+    // Put the app's grade back.
+    toggle.click();
+    const again = panel().querySelector<HTMLSelectElement>(".ttype")!;
+    again.value = before;
+    again.dispatchEvent(new window.Event("change"));
+    toggle.click();
+    expect(tabBadge().dataset.call).toBe(before);
+    expect(tabBadge().title).not.toContain("set by you");
+    expect(errors).toEqual([]);
+  });
+
   it("labels each roster row's stats, for the narrow layout that has no column headings", () => {
     const row = document.querySelector("#rosters .row")!;
     const labels = [...row.querySelectorAll(".stats .u")].map((n) => n.textContent!.trim());

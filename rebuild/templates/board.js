@@ -104,7 +104,7 @@ function renderCompare() {
     const vnames = Object.keys(d.vars), tn = tgtName(d);
     const fit = (d.title.match(/\(needs (\w+)\)/) || [])[1];
     h.push(`<article class="dcard"><header><span class="rk">#${i + 1}</span><div>
-      <div class="dt">${sells ? `${esc(dealAsset(d))}<span class="arrow">→</span>${esc(t.name)}` : `${esc(dealAsset(d))}<span class="arrow">←</span>${esc(t.name)}`}${who(t)}</div>
+      <div class="dt">${sells ? `${esc(dealAsset(d))}<span class="arrow">→</span>${esc(t.name)}` : `${esc(dealAsset(d))}<span class="arrow">←</span>${esc(t.name)}`}${who(t)}${callBadge(t.rid)}</div>
       <div class="dm"><span>${sells ? "you send" : "you receive"} <b>${d.fixed.map(x => esc(x.label)).join(", ")}</b> · <b>${fmt(sum(d.fixed))}</b></span><span><b>${t.wins}-${t.losses}</b> · ${ord(t.rank)} of ${DATA.teams.length}</span>${fit ? `<span class="fit">needs ${fit}</span>` : ""}</div>
       </div><button class="open" type="button" data-i="${i}">Open on board</button></header><div class="vgrid">`);
     vnames.forEach((n, k) => {
@@ -125,7 +125,7 @@ function renderCompare() {
       const [, A, B] = m.teams;
       const got = rid => m.moves.filter(x => x.to === rid), gave = rid => m.moves.filter(x => x.from === rid);
       h.push(`<article class="dcard"><header><span class="rk">T${i + 1}</span><div>
-        <div class="dt">${esc(m.asset)}<span class="arrow">→</span>${esc(tname(A))}${who(T[A])}<span class="arrow">+</span>${esc(tname(B))}${who(T[B])}</div>
+        <div class="dt">${esc(m.asset)}<span class="arrow">→</span>${esc(tname(A))}${who(T[A])}${callBadge(A)}<span class="arrow">+</span>${esc(tname(B))}${who(T[B])}${callBadge(B)}</div>
         <div class="dm"><span>${esc(m.why)}</span></div></div><button class="open" type="button" data-m="${i}">Open on board</button></header><div class="vgrid">`);
       for (const rid of m.teams) {
         const g = sum(got(rid)), sv = sum(gave(rid)), p = W().on ? sideOf(rid, movesOfDeal(m)).pct : (sv ? Math.round(g / sv * 100) : null);
@@ -168,6 +168,14 @@ function sideOf(rid, moves) {
   const amount = Math.round(change * (W().rates[typeOf(rid)] || 0));
   return {got, sent, change, amount, pct: teamReturn(got, sent, amount)};
 }
+// A team's call as a badge, wherever the team is named: the app's grade, or the user's override. `short` is the tab-sized form,
+// an abbreviation with the word in its title and for screen readers. Colour is never the only difference between the three.
+const CALL_NAME = {contend: "Contend", retool: "Retool", rebuild: "Rebuild"}, CALL_SHORT = {contend: "Con", retool: "Ret", rebuild: "Reb"};
+const callBadge = (rid, short) => {
+  const t = CALL_NAME[typeOf(rid)] ? typeOf(rid) : "retool", ovr = !!W().types[rid];
+  const tip = ovr ? `${CALL_NAME[t]}: set by you (the app graded this team ${CALL_NAME[T[rid].type] || "retool"})` : `${CALL_NAME[t]}: the app's grade of this team, the same grading that makes your own call`;
+  return `<span class="call ${t}${short ? " sm" : ""}${ovr ? " ovr" : ""}" data-call="${t}" title="${esc(tip)}">${short ? `<span aria-hidden="true">${CALL_SHORT[t]}</span><span class="sr"> ${CALL_NAME[t]}</span>` : CALL_NAME[t]}</span>`;
+};
 const lineupLine = sd => (W().on ? `<div class="mt lu">lineup <b class="${sd.change > 0 ? "good" : sd.change < 0 ? "bad" : ""}">${sd.change ? (sd.change > 0 ? "+" : "−") + Math.abs(sd.change).toFixed(1) + " pts/wk" : "no change"}</b>${sd.amount ? `, ${sgn(sd.amount)}` : ""}</div>` : "");
 const typeSel = team => {
   if (!W().on) return "";
@@ -177,7 +185,7 @@ const typeSel = team => {
 const pickTotal = team => (W().on ? team.picks.reduce((a, p) => a + px(p.value), 0) : team.pick_value);
 function panel(team, hl, isMe, opts = {}) {
   const h = [];
-  h.push(`<div class="phead">${opts.removable ? `<button class="unpin" type="button" data-rid="${team.rid}" aria-label="Hide ${esc(team.name)}" title="Hide this roster">×</button>` : ""}<h2>${esc(team.name)}${who(team)}${isMe ? ' <span style="color:var(--accent)">· you</span>' : ""}${opts.focus ? '<span class="focus">selected</span>' : ""}${typeSel(team)}</h2><div class="meta"><span><b>${team.wins}-${team.losses}</b> · ${ord(team.rank)} of ${DATA.teams.length}</span>${SEASONS.length ? `<span>proj. ${esc(SEASONS[0])} pick <b>${pad(team.proj_slot)}</b></span>` : ""}<span>startable <b>${team.startable}</b></span><span>core age <b>${team.core_age ? team.core_age.toFixed(1) : "–"}</b></span><span>players <b>${fmt(W().on ? team.players.reduce((a, p) => a + px(p.value), 0) : team.player_value)}</b></span><span>picks <b>${fmt(pickTotal(team))}</b></span></div></div>`);
+  h.push(`<div class="phead">${opts.removable ? `<button class="unpin" type="button" data-rid="${team.rid}" aria-label="Hide ${esc(team.name)}" title="Hide this roster">×</button>` : ""}<h2>${esc(team.name)}${who(team)}${isMe ? ' <span style="color:var(--accent)">· you</span>' : ""}${opts.focus ? '<span class="focus">selected</span>' : ""}${W().on ? typeSel(team) : callBadge(team.rid)}</h2><div class="meta"><span><b>${team.wins}-${team.losses}</b> · ${ord(team.rank)} of ${DATA.teams.length}</span>${SEASONS.length ? `<span>proj. ${esc(SEASONS[0])} pick <b>${pad(team.proj_slot)}</b></span>` : ""}<span>startable <b>${team.startable}</b></span><span>core age <b>${team.core_age ? team.core_age.toFixed(1) : "–"}</b></span><span>players <b>${fmt(W().on ? team.players.reduce((a, p) => a + px(p.value), 0) : team.player_value)}</b></span><span>picks <b>${fmt(pickTotal(team))}</b></span></div></div>`);
   h.push(`<div class="cols"><span>Pos</span><span>Player</span><span>Team</span><span>Age</span><span>PPG</span><span title="Production vs price: rank at the position by PPG against rank by value. + produces better than priced.">P/V</span><span>Value</span></div>`);
   for (const pos of POS) {
     const ps = team.players.filter(p => p.pos === pos);
@@ -296,10 +304,10 @@ function renderHistory() {
 
 function render() {
   const other = T[sel.team];
-  document.getElementById("h1").innerHTML = `${esc(DATA.league)} Trade Board <span class="call">${esc(DATA.mode)}</span>`;
+  document.getElementById("h1").innerHTML = `${esc(DATA.league)} Trade Board <span class="call${CALL_NAME[DATA.mode] ? " " + DATA.mode : ""}">${esc(DATA.mode)}</span>`;
   document.getElementById("sub").textContent = `${DATA.season} · week ${DATA.week} · values as of ${DATA.asof} · ${me.name} vs ${other.name}${handle(other) ? ` (${handle(other)})` : ""}`;
   document.getElementById("summary").innerHTML = `<b>The call: ${esc(DATA.mode)}.</b> ${esc(DATA.call_text)}<ul>${DATA.reasons.map(r => `<li>${esc(r)}</li>`).join("")}</ul>`;
-  document.getElementById("note").textContent = DATA.note;
+  document.getElementById("note").textContent = `${DATA.note} The Contend, Retool or Rebuild badge beside a team (Con, Ret, Reb on the tabs) is the app's grade of that roster, the same grading that makes your own call; with custom league weights on you can change it for a team.`;
 
   const TH_ = DATA.trade_history, nHist = TH_ ? TH_.trades.length : 0;
   const nDeals = DATA.deals.length + MULTI.length;
@@ -335,7 +343,7 @@ function render() {
   const cur = shown.includes(sel.ros) ? sel.ros : ME;
 
   const tabsX = tabs.scrollLeft;
-  tabs.innerHTML = others.map(r => `<span class="tabw"><button class="tab${shown.includes(r) ? " shown" : ""}" role="tab" aria-selected="${r === sel.team}" data-team="${r}">${esc(T[r].name)}${who(T[r])}${withDeals.includes(r) ? '<span class="dot"></span>' : ""}</button><button class="pin" type="button" data-pin="${r}" aria-pressed="${pins.includes(r)}" title="${pins.includes(r) ? "Unpin this roster" : "Show this roster alongside"}" aria-label="${pins.includes(r) ? "Unpin" : "Pin"} ${esc(T[r].name)}">${pins.includes(r) ? "−" : "+"}</button></span>`).join("");
+  tabs.innerHTML = others.map(r => `<span class="tabw"><button class="tab${shown.includes(r) ? " shown" : ""}" role="tab" aria-selected="${r === sel.team}" data-team="${r}">${esc(T[r].name)}${who(T[r])}${callBadge(r, true)}${withDeals.includes(r) ? '<span class="dot"></span>' : ""}</button><button class="pin" type="button" data-pin="${r}" aria-pressed="${pins.includes(r)}" title="${pins.includes(r) ? "Unpin this roster" : "Show this roster alongside"}" aria-label="${pins.includes(r) ? "Unpin" : "Pin"} ${esc(T[r].name)}">${pins.includes(r) ? "−" : "+"}</button></span>`).join("");
   // On a narrow screen the tabs are one row that scrolls sideways: keep its place, and bring a newly selected team into view.
   tabs.scrollLeft = tabsX;
   const onTab = tabs.querySelector('.tab[aria-selected="true"]');
@@ -418,7 +426,7 @@ function render() {
   const li = x => `<li draggable="true" data-i="${x.idx}" data-from="${x.from}" title="Drag onto another team to send it there"><span class="il">${esc(x.a.label)}<small>from ${x.from === ME ? "you" : esc(tname(x.from))}</small></span><span class="iv">${fmt(x.a.value)}</span>${custom ? `<button class="rm" type="button" data-i="${x.idx}" aria-label="Remove ${esc(x.a.label)}">×</button>` : ""}</li>`;
   const empty = `<li class="empty">nothing yet</li>`;
 
-  const left = `<div class="panel"><h3>Deals with ${esc(other.name)}${who(other)}</h3>
+  const left = `<div class="panel"><h3>Deals with ${esc(other.name)}${who(other)}${callBadge(other.rid)}</h3>
     ${deals.length || mlist.length ? `<div class="deals">${deals.map((d, i) => `<button class="deal" aria-selected="${!custom && i === sel.deal}" data-i="${i}">${esc(d.title)}<small>${d.fixed_side === "sends" ? d.fixed.map(x => esc(x.label)).join(", ") + " out" : d.fixed.map(x => esc(x.label)).join(", ") + " in"}</small></button>`).join("")}
       ${mlist.map(({m, i}) => `<button class="deal multi" aria-selected="${isBase && baseIdx === i}" data-m="${i}">${esc(m.title)}<small>${m.teams.filter(r => r !== ME).map(r => esc(tname(r))).join(" + ")}</small></button>`).join("")}</div>`
       : `<p class="note">Nothing drafted with ${esc(other.name)}: ${DATA.mode === "contend" ? "no older producer at your weak spots" : "not a contender with pick capital, or nothing on your sell list fits"}.</p>`}
@@ -432,7 +440,7 @@ function render() {
     const title = custom ? (isBase ? "Three-team deal" : (baseIdx !== null ? "Custom trade (from a three-team deal)" : (teamsIn.length > 2 ? "Custom multi-team trade" : "Custom trade"))) : (deal ? `${esc(deal.title)} · ${esc(v)}` : "Trade");
     const blocks = order.map(rid => {
       const p = pctOf(rid), got = gotOf(rid);
-      return `<div class="mside${rid === ME ? " me" : ""}" data-drop="${rid}"><div class="mh"><span><b>${rid === ME ? "You" : esc(tname(rid))}</b>${rid !== ME ? who(T[rid]) : ""} get${rid === ME ? "" : "s"}</span><span class="p ${pcls(p)}">${p === null ? "–" : p + "%"}</span></div>
+      return `<div class="mside${rid === ME ? " me" : ""}" data-drop="${rid}"><div class="mh"><span><b>${rid === ME ? "You" : esc(tname(rid))}</b>${rid !== ME ? who(T[rid]) : ""} get${rid === ME ? "" : "s"}${callBadge(rid)}</span><span class="p ${pcls(p)}">${p === null ? "–" : p + "%"}</span></div>
         <ul class="side" style="list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:3px">${got.map(li).join("") || empty}</ul>
         <div class="mt">gets <b>${fmt(tot(got))}</b> for <b>${fmt(tot(gaveOf(rid)))}</b> sent</div>${sides[rid] ? lineupLine(sides[rid]) : ""}</div>`;
     }).join("");
@@ -450,7 +458,7 @@ function render() {
   rail.innerHTML = multi ? right : left + right;
   // The bar above the rosters (narrow screens only): which roster is on screen, and the trade's return with a way back up to it.
   const rbar = document.getElementById("rbar"), barP = pctOf(ME);
-  rbar.innerHTML = `<div class="rsw" role="tablist" aria-label="Roster on screen">${shown.map(rid => `<button class="rs" type="button" role="tab" aria-selected="${rid === cur}" data-ros="${rid}">${rid === ME ? "You" : esc(tname(rid))}</button>`).join("")}</div>
+  rbar.innerHTML = `<div class="rsw" role="tablist" aria-label="Roster on screen">${shown.map(rid => `<button class="rs" type="button" role="tab" aria-selected="${rid === cur}" data-ros="${rid}">${rid === ME ? "You" : esc(tname(rid)) + callBadge(rid, true)}</button>`).join("")}</div>
     <button class="rgo ${R.length ? pcls(barP) : ""}" type="button" aria-label="Go to the trade${R.length && barP !== null ? `, your return ${barP}%` : ""}">Trade${R.length ? ` <b>${barP === null ? "–" : barP + "%"}</b>` : ""}</button>`;
   rbar.querySelectorAll(".rs").forEach(b => b.onclick = () => { sel.ros = +b.dataset.ros; save(); render(); });
   rbar.querySelector(".rgo").onclick = () => rail.lastElementChild.scrollIntoView({behavior: "smooth", block: "start"});
