@@ -19,6 +19,16 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:.0
 .top h1{font-size:30px;line-height:1;text-transform:uppercase}
 .top .sub{color:var(--muted);font-size:13px}
 .call{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:4px;font:700 12px var(--display);letter-spacing:.08em;text-transform:uppercase;background:var(--accent);color:#1a1400;vertical-align:middle}
+/* a team's call beside its name: contend filled, retool outlined, rebuild tinted blue, and always the word (or, on a tab, its
+   abbreviation with the word in the title). .sm is the tab-sized one. */
+.call{border:1px solid var(--accent);white-space:nowrap}
+.call.retool{background:none;color:inherit;border-color:currentColor}
+.call.rebuild{background:color-mix(in srgb,var(--wr) 20%,var(--panel));color:var(--wr);border-color:var(--wr)}
+.call.ovr{border-style:dashed}
+.call.sm{margin-left:6px;padding:0 4px;font-size:10px;letter-spacing:.06em;vertical-align:1px}
+.phead .call{vertical-align:4px}
+.tab[aria-selected="true"] .call{background:#1a1400;color:var(--accent);border-color:#1a1400}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 /* one row that scrolls sideways, out to the screen's edges; wraps from 720px */
 .tabs{position:relative;display:flex;gap:6px;padding:12px 16px;margin:0 -16px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
 .tabs::-webkit-scrollbar,.rsw::-webkit-scrollbar,.views::-webkit-scrollbar{display:none}
@@ -109,7 +119,7 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:.0
 .wstrip.on{border-color:var(--accent)}
 .wstrip label.tog{display:inline-flex;align-items:center;gap:7px;font-weight:600;cursor:pointer;white-space:nowrap}
 .wstrip input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
-.wctl{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.wctl{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px 7px;max-width:100%;white-space:nowrap}
 .wctl input[type=range]{width:120px;accent-color:var(--accent)}
 .wctl b{font-family:var(--mono);font-size:12px;min-width:44px}
 .wstrip .dp{color:var(--muted);font-size:12px}
